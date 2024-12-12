@@ -9,29 +9,29 @@ from constant import IMAGE_PATH, GIF_OUTPUT_PATH, DATA_OUTPUT_PATH
 
 import matplotlib.pyplot as plt
 
+
 class GP:
     def __init__(self, filename):
         original_image = Image.open(filename)
 
-        # davidson image 
+        # davidson image
         # self.target_image = original_image.resize((160,120))
 
-        # debugging 
+        # debugging
         # self.target_image = original_image.resize((200,200))
-        
+
         # mona lisa image
         # self.target_image = original_image.resize((176,203))
-        
+
         # mona lisa twice as large (times 1.5)
-        self.target_image = original_image.resize((264,305))
+        self.target_image = original_image.resize((200, 200))
 
         # mona lisa twice as large (times 2.5)
         # self.target_image = original_image.resize((440,508))
 
         self.l, self.w = self.target_image.size
-        
-        self.target_image_array = self.to_array(self.target_image)
 
+        self.target_image_array = self.to_array(self.target_image)
 
     def run_gp(self, pop_size, epochs):
         """
@@ -39,14 +39,20 @@ class GP:
 
         Keyword arguments:
         pop_size -- the population size for each generation
-        epochs -- number of generations to run 
+        epochs -- number of generations to run
 
         Returns:
         fittest -- individual with the best fitness from final generation
         """
 
-        data = {'epoch':[], 'fitness_estimate':[], 'crossover_used':[], 'pop_gen_used':[], 'im_size':[]}
-        
+        data = {
+            "epoch": [],
+            "fitness_estimate": [],
+            "crossover_used": [],
+            "pop_gen_used": [],
+            "im_size": [],
+        }
+
         population = []
 
         # initialize starting population
@@ -60,8 +66,8 @@ class GP:
         for i in range(epochs):
             new_pop = []
 
-            # estimate for fitness of fittest individual from current epoch's population 
-            fittest_estimate = float('inf')
+            # estimate for fitness of fittest individual from current epoch's population
+            fittest_estimate = float("inf")
 
             # populate our new population
             while len(new_pop) < len(population):
@@ -69,11 +75,13 @@ class GP:
                 parent_one = self.tournament_select(population)
                 parent_two = self.tournament_select(population)
 
-                fittest_estimate = min(parent_one.fitness, parent_two.fitness, fittest_estimate)
+                fittest_estimate = min(
+                    parent_one.fitness, parent_two.fitness, fittest_estimate
+                )
 
-                # probabilistically determine how child of both parents is created 
+                # probabilistically determine how child of both parents is created
                 rand = random.uniform(0, 1)
-                        
+
                 if rand < 0.3:
                     child = self.crossover(parent_one, parent_two)
 
@@ -91,7 +99,7 @@ class GP:
                         parent_two = self.tournament_select(population)
 
                         child = self.crossover_2(parent_one, parent_two, 0.5)
-                
+
                 else:
                     child = self.mutate(parent_one)
 
@@ -104,43 +112,46 @@ class GP:
 
             # set population = new_pop
             population = new_pop
-            
-            # fitness data recording 
+
+            # fitness data recording
             if i % 100 == 0 or i == epochs - 1:
-                data['epoch'].append(i)
-                data['fitness_estimate'].append(fittest_estimate)
-                data['crossover_used'].append("crossover_1")
-                data['pop_gen_used'].append("random_image_array_1")
-                data['im_size'].append("(" + str(self.w) + "," + str(self.l) + ")")
-            
-            # save images on interval to see progress  
+                data["epoch"].append(i)
+                data["fitness_estimate"].append(fittest_estimate)
+                data["crossover_used"].append("crossover_1")
+                data["pop_gen_used"].append("random_image_array_1")
+                data["im_size"].append("(" + str(self.w) + "," + str(self.l) + ")")
+
+            # save images on interval to see progress
             # if i % 1000 == 0 or i == epochs - 1:
             if i % 100 == 0 or i == epochs - 1:
 
-                print("Most fit individual in epoch " + str(i) +
-                    " has fitness: " + str(fittest_estimate))
-                
+                print(
+                    "Most fit individual in epoch "
+                    + str(i)
+                    + " has fitness: "
+                    + str(fittest_estimate)
+                )
+
                 population.sort(key=lambda ind: ind.fitness)
                 fittest = population[0]
-                
+
                 os.makedirs("gif", exist_ok=True)
 
                 fittest.image.save(f"{GIF_OUTPUT_PATH}{i}.png")
-                
+
                 data_df = DataFrame(data)
-    
+
                 data_df.to_csv(DATA_OUTPUT_PATH)
 
-        # save collected data to csv 
+        # save collected data to csv
         data_df = DataFrame(data)
         data_df.to_csv(DATA_OUTPUT_PATH)
 
-        # fittest individual of the final population 
+        # fittest individual of the final population
         population.sort(key=lambda ind: ind.fitness)
         fittest = population[0]
 
         return fittest
-
 
     def tournament_select(self, population, tournament_size=6):
         """
@@ -160,15 +171,14 @@ class GP:
 
         winner = None
 
-        # find individual with best fitness 
+        # find individual with best fitness
         for i in random_subset:
-            if (winner == None):
+            if winner == None:
                 winner = i
             elif i.fitness < winner.fitness:
                 winner = i
 
         return winner
-
 
     def crossover(self, ind1, ind2):
         """
@@ -182,28 +192,32 @@ class GP:
         Returns:
         child or None -- child of the two parents if it is more fit than both parents
         """
-        
+
         child = Individual(self.l, self.w)
 
-        # random float between 0 and 1 
+        # random float between 0 and 1
         blend_alpha = random.random()
+        # print(f"[GP]: The alpha constant for blending the picture is {blend_alpha}")
 
-        # if blend_alpha is 0.0, a copy of the first image is returned. 
+        # if blend_alpha is 0.0, a copy of the first image is returned.
         # If blend_alpha is 1.0, a copy of the second image is returned.
-        # use a random blend_alpha \in (0,1) 
+        # use a random blend_alpha \in (0,1)
         child_image = Image.blend(ind1.image, ind2.image, blend_alpha)
         child.image = child_image
         child.array = np.array(child_image)
-        child.get_fitness(self.target_image)
+        # print("[GP]: Blend successful & starting get_fitness")
+        try:
+            child.get_fitness(self.target_image)
+        except:
+            print("[GP error]: Can't get_fitness")
 
-        # elitism 
+        # elitism
         if child.fitness == min(ind1.fitness, ind2.fitness, child.fitness):
             return child
 
         return None
 
-    
-    def crossover_2(self, ind1, ind2, horizontal_prob):
+    def crossover_2(self, ind1, ind2, horizontal_prob=0.5):
         """
         Performs 'crossover point' crossover given two parents and creates a child \
             Randomly selects the crossover point to be either a row or column \
@@ -219,48 +233,47 @@ class GP:
 
         rand = random.random()
 
-        # perform horizontal crossover point 
+        # perform horizontal crossover point
         if rand <= horizontal_prob:
 
             split_point = random.randint(1, self.w)
-            
-            first = np.ones((split_point, self.l))
-            first = np.vstack((first, np.zeros((self.w-split_point, self.l))))
 
-        # perform vertical crossover point 
+            first = np.ones((split_point, self.l))
+            first = np.vstack((first, np.zeros((self.w - split_point, self.l))))
+
+        # perform vertical crossover point
         else:
             split_point = random.randint(1, self.l)
-        
+
             first = np.ones((self.w, split_point))
 
-            first = np.hstack((first, np.zeros((self.w, self.l-split_point))))
-            
+            first = np.hstack((first, np.zeros((self.w, self.l - split_point))))
+
         second = 1 - first
 
-        # Creates the 4 dimensional versions to perform the mutliplying across all color channels 
-        first = np.dstack([first,first,first,first])
-        second = np.dstack([second,second,second,second])
+        # Creates the 4 dimensional versions to perform the mutliplying across all color channels
+        first = np.dstack([first, first, first, first])
+        second = np.dstack([second, second, second, second])
 
         # Multiply parent1 with first and multiply parent2 with second. Then simplay add them element wise and it should produce the crossover child.
 
         half_chromo_1 = np.multiply(first, ind1.array)
         half_chromo_2 = np.multiply(second, ind2.array)
-        
+
         child_array = np.add(half_chromo_1, half_chromo_2)
-        
+
         child = Individual(self.l, self.w)
-        
+
         child.image = Image.fromarray(child_array.astype(np.uint8))
         child.array = child_array.astype(np.uint8)
-        
+
         child.get_fitness(self.target_image)
 
-        # elitism 
+        # elitism
         if child.fitness == min(ind1.fitness, ind2.fitness, child.fitness):
             return child
 
         return None
-
 
     def crossover_3(self, ind1, ind2):
         """
@@ -275,24 +288,23 @@ class GP:
         child or None -- child of the two parents if it is more fit than both parents
         """
         first = np.random.randint(2, size=(self.w, self.l, 4))
-        
+
         second = 1 - first
-        
+
         half_chromo_1 = np.multiply(first, ind1.array)
-        
+
         half_chromo_2 = np.multiply(second, ind2.array)
-        
+
         child_array = np.add(half_chromo_1, half_chromo_2)
-        
+
         child = Individual(self.l, self.w)
-        
+
         child.image = Image.fromarray(child_array.astype(np.uint8))
         child.array = child_array.astype(np.uint8)
-        
-        child.get_fitness(self.target_image)
-        
-        return child
 
+        child.get_fitness(self.target_image)
+
+        return child
 
     def mutate(self, ind):
         """
@@ -306,7 +318,7 @@ class GP:
         """
 
         iterations = random.randint(1, 3)
-        region = random.randint(1,(self.l + self.w)//4)
+        region = random.randint(1, (self.l + self.w) // 4)
 
         img = ind.image
 
@@ -317,8 +329,12 @@ class GP:
 
             xy = []
             for j in range(num_points):
-                xy.append((random.randint(region_x - region, region_x + region),
-                           random.randint(region_y - region, region_y + region)))
+                xy.append(
+                    (
+                        random.randint(region_x - region, region_x + region),
+                        random.randint(region_y - region, region_y + region),
+                    )
+                )
 
             img1 = ImageDraw.Draw(img)
             img1.polygon(xy, fill=ind.rand_color())
@@ -328,9 +344,8 @@ class GP:
         child.array = child.to_array(child.image)
         child.get_fitness(self.target_image)
 
-        return child 
+        return child
 
-        
     def mutate_2(self, ind):
         """
         Mutates an individual by selecting a random subset of pixels and altering their RGB values
@@ -341,16 +356,16 @@ class GP:
         Returns:
         child -- the individual post mutation
         """
-        
+
         num_pix = 40
-        
+
         for i in range(num_pix):
-            x = random.randint(0, self.l-1)
-            y = random.randint(0, self.w-1)
+            x = random.randint(0, self.l - 1)
+            y = random.randint(0, self.w - 1)
             z = random.randint(0, 3)
-            
-            ind.array[x][y][z] = ind.array[x][y][z] + random.randint(-10,10)
-                
+
+            ind.array[x][y][z] = ind.array[x][y][z] + random.randint(10, 30)
+
         ind.image = self.to_image(ind.array)
         ind.get_fitness(self.target_image)
 
@@ -360,13 +375,15 @@ class GP:
     def to_array(self, image):
         return np.array(image)
 
-# driver 
+
+# driver
 def main():
     gp = GP(IMAGE_PATH)
 
     fittest = gp.run_gp(100, 15000)
     plt.imshow(fittest.image)
     plt.show()
+
 
 if __name__ == "__main__":
     main()
