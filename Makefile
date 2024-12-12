@@ -1,4 +1,4 @@
 .PHONY: run
 
 run:
-	./docker-entrypoint.sh
+	cd app && streamlit run streamlit.py
