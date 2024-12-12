@@ -234,12 +234,12 @@ This is the hyperparmeters that worked best for us:
   - `streamlit`
   - `python >3.10`
   - `poetry`
+  - `make`
 
 ```bash
 # install dependencies
 poetry install
 
 # run the application
-cd app
-streamlit run streamlit.py
+make run
 ```
