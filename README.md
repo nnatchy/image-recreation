@@ -222,7 +222,7 @@ This is the hyperparmeters that worked best for us:
   - Crossover
     - Using a probabilistic mix of 30% crossover 1 (blending) and 60% crossover 2 (crossover)
   - Mutation
-    - Using a 10% chance for mutation 1 (adding shape)
+    - Using a 10% chance for mutation 1 (adding shape with random size & colours)
 - Number of generations
   - Anywhere between 5,000 and 10,000
 
